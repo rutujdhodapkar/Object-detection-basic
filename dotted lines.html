@@ -1,0 +1,135 @@
+<style>
+  body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: #000000;
+  }
+  .rain-dot {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    background: #fff;
+    border-radius: 50%;
+    pointer-events: none;
+    opacity: 0.13;
+    box-shadow: none;
+    z-index: 1;
+    transition: opacity 0.12s cubic-bezier(.6,0,.4,1);
+    /* Slightly longer transition for less GPU load */
+  }
+  .rain-dot.on {
+    opacity: 1;
+    background: #fff;
+    box-shadow: none;
+  }
+</style>
+<script>
+  // Hardware-friendly: reduce dot count, animation rate, and DOM updates
+
+  // Responsive spacing and dot size based on screen width
+  function getDotConfig() {
+    const w = window.innerWidth;
+    if (w < 500) {
+      // Mobile: make dots dense (smaller spacing, more columns/rows)
+      return { SPACING_X: 10, SPACING_Y: 10, DOT_SIZE: 8, MIN_COLS: 20, MIN_ROWS: 32 };
+    } else if (w < 900) {
+      // Tablet/small desktop - make circles more dense than before
+      return { SPACING_X: 10, SPACING_Y: 10, DOT_SIZE: 8, MIN_COLS: 24, MIN_ROWS: 28 };
+    } else if (w < 1600) {
+      // Large desktop (default density)
+      return { SPACING_X: 12, SPACING_Y: 12, DOT_SIZE: 8, MIN_COLS: 28, MIN_ROWS: 28 };
+    } else {
+      // Extra large screens: make circles even more dense
+      return { SPACING_X: 8, SPACING_Y: 8, DOT_SIZE: 7, MIN_COLS: 40, MIN_ROWS: 40 };
+    }
+  }
+
+  let rainDots = [];
+  let cols = 0, rows = 0;
+  let SPACING_X = 16, SPACING_Y = 16, DOT_SIZE = 8, MIN_COLS = 22, MIN_ROWS = 22;
+
+  function placeGridDots() {
+    // Remove old dots
+    rainDots.forEach(dot => dot.remove());
+    rainDots = [];
+
+    // Get config for current screen size
+    const config = getDotConfig();
+    SPACING_X = config.SPACING_X;
+    SPACING_Y = config.SPACING_Y;
+    DOT_SIZE = config.DOT_SIZE;
+    MIN_COLS = config.MIN_COLS;
+    MIN_ROWS = config.MIN_ROWS;
+
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+
+    cols = Math.floor((width - DOT_SIZE) / SPACING_X) + 1;
+    rows = Math.floor((height - DOT_SIZE) / SPACING_Y) + 1;
+    if (cols < MIN_COLS) cols = MIN_COLS;
+    if (rows < MIN_ROWS) rows = MIN_ROWS;
+
+    // Calculate the grid's total width/height to center it
+    const gridWidth = (cols - 1) * SPACING_X + DOT_SIZE;
+    const gridHeight = (rows - 1) * SPACING_Y + DOT_SIZE;
+    const offsetX = Math.max(0, (width - gridWidth) / 2);
+    const offsetY = Math.max(0, (height - gridHeight) / 2);
+
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < cols; col++) {
+        const x = offsetX + col * SPACING_X;
+        const y = offsetY + row * SPACING_Y;
+        const dot = document.createElement('div');
+        dot.className = 'rain-dot';
+        dot.style.left = x + 'px';
+        dot.style.top = y + 'px';
+        dot.style.width = DOT_SIZE + 'px';
+        dot.style.height = DOT_SIZE + 'px';
+        document.body.appendChild(dot);
+        rainDots.push(dot);
+      }
+    }
+  }
+
+  // Hardware-friendly animation: lower frame rate, only update if state changes
+  let t = 0;
+  let lastStates = [];
+  function animatePattern() {
+    if (!rainDots.length) return;
+
+    // Lower frame rate: ~20fps (50ms)
+    setTimeout(() => {
+      for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+          let idx = row * cols + col;
+          let dot = rainDots[idx];
+          if (!dot) continue;
+          // Diagonal wave: use sine function for animation
+          let phase = (row + col) / 10 - t; // slower, less frequent toggling
+          let on = Math.sin(phase) > 0.6;
+          if (lastStates[idx] !== on) {
+            if (on) {
+              dot.classList.add('on');
+            } else {
+              dot.classList.remove('on');
+            }
+            lastStates[idx] = on;
+          }
+        }
+      }
+      t += 0.05; // slower animation
+      requestAnimationFrame(animatePattern);
+    }, 50);
+  }
+
+  window.addEventListener('DOMContentLoaded', () => {
+    placeGridDots();
+    lastStates = [];
+    animatePattern();
+  });
+  window.addEventListener('resize', () => {
+    placeGridDots();
+    lastStates = [];
+  });
+</script>
