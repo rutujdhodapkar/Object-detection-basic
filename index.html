@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Vision Lite - Scene & Object Detection</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            color: #fff;
+            min-height: 100vh;
+            min-width: 100vw;
+            width: 100vw;
+            height: 100vh;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: none;
+            position: relative;
+            z-index: 0;
+        }
+        /* Center everything using a flex wrapper */
+        .center-wrapper {
+            width: 100vw;
+            height: 100vh;
+            min-height: 100vh;
+            min-width: 100vw;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            position: relative;
+        }
+        /* Pattern background container */
+        #pattern-bg {
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            pointer-events: none;
+            overflow: hidden;
+        }
+        .container {
+            max-width: 480px;
+            width: 100%;
+            margin: 0 auto;
+            background: #181818;
+            border-radius: 18px;
+            box-shadow: 0 4px 32px rgba(0,0,0,0.45);
+            padding: 36px 28px 32px 28px;
+            border: 1.5px solid #232323;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        h1 {
+            text-align: center;
+            color: #fff;
+            font-size: 2.2em;
+            letter-spacing: 1px;
+            margin-bottom: 28px;
+            font-weight: 700;
+        }
+        .drop-area {
+            border: 2.5px dashed #444;
+            border-radius: 12px;
+            padding: 36px 18px;
+            text-align: center;
+            color: #bbb;
+            margin-bottom: 28px;
+            background: #222;
+            transition: border-color 0.2s, background 0.2s, color 0.2s;
+            cursor: pointer;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .drop-area.dragover {
+            border-color: #00bfff;
+            color: #00bfff;
+            background: #181f2a;
+        }
+        .drop-area label {
+            color: #00bfff;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+        .preview-img {
+            display: block;
+            max-width: 100%;
+            max-height: 220px;
+            margin: 18px auto 0 auto;
+            border-radius: 10px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+            border: 1.5px solid #232323;
+            background: #181818;
+        }
+        .file-btn {
+            margin-top: 16px;
+            padding: 10px 0;
+            width: 100%;
+            background: linear-gradient(90deg, #00bfff 0%, #007bff 100%);
+            color: #fff;
+            border: none;
+            border-radius: 32px; /* More round corners */
+            cursor: pointer;
+            font-size: 1.08em;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 8px rgba(0,191,255,0.08);
+            transition: background 0.18s;
+        }
+        .file-btn:hover, .file-btn:focus {
+            background: linear-gradient(90deg, #007bff 0%, #00bfff 100%);
+            outline: none;
+        }
+        .result-message {
+            color: #ff4d4d;
+            margin-top: 14px;
+            text-align: center;
+            font-size: 1.01em;
+            min-height: 22px;
+        }
+        .output-section {
+            margin-top: 36px;
+            text-align: center;
+            background: #181818;
+            border-radius: 12px;
+            padding: 22px 10px 10px 10px;
+            border: 1.5px solid #232323;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.10);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .output-section img {
+            max-width: 100%;
+            border-radius: 10px;
+            margin-bottom: 16px;
+            border: 1.5px solid #232323;
+            background: #222;
+        }
+        .output-label {
+            font-weight: 600;
+            color: #00bfff;
+            font-size: 1.08em;
+            letter-spacing: 0.2px;
+        }
+        .objects-list {
+            display: inline-block;
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+        .objects-list li {
+            background: #232b3a;
+            color: #fff;
+            display: inline-block;
+            margin: 3px 7px 3px 0;
+            padding: 5px 14px;
+            border-radius: 16px;
+            font-size: 1em;
+            font-weight: 500;
+            letter-spacing: 0.1px;
+            border: 1px solid #00bfff33;
+            box-shadow: 0 1px 4px rgba(0,191,255,0.04);
+        }
+        @media (max-width: 600px) {
+            .container {
+                padding: 18px 4vw 18px 4vw;
+            }
+            .output-section {
+                padding: 14px 2vw 8px 2vw;
+            }
+            .center-wrapper {
+                padding: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+<div id="pattern-bg"></div>
+<div class="center-wrapper">
+    <div class="container">
+        <h1>Vision Lite</h1>
+        <form id="upload-form" method="post" enctype="multipart/form-data" autocomplete="off" style="width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+            <div id="drop-area" class="drop-area" style="width:100%;">
+                <span id="drop-text">
+                    Drag &amp; drop an image here, or 
+                    <label for="file-input">browse</label>
+                </span>
+                <input type="file" id="file-input" name="image" accept="image/*" style="display:none;">
+                <img id="preview" class="preview-img" style="display:none;" />
+            </div>
+            <button type="submit" class="file-btn">Analyze Image</button>
+            <div id="result-message" class="result-message"></div>
+        </form>
+
+        <div class="output-section" id="output-section" style="display:none;">
+            <div>
+                <span class="output-label">Detected Image:</span><br>
+                <img id="output-image" src="" alt="Detected Output">
+            </div>
+            <div style="margin-top: 10px;">
+                <span class="output-label">Scene:</span>
+                <span id="scene-output"></span>
+            </div>
+            <div style="margin-top: 10px;">
+                <span class="output-label">Objects:</span>
+                <ul id="objects-output" class="objects-list"></ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // pattern.html removed
+
+    const dropArea = document.getElementById('drop-area');
+    const fileInput = document.getElementById('file-input');
+    const previewImg = document.getElementById('preview');
+    const uploadForm = document.getElementById('upload-form');
+    const resultMessage = document.getElementById('result-message');
+    const outputSection = document.getElementById('output-section');
+    const outputImage = document.getElementById('output-image');
+    const sceneOutput = document.getElementById('scene-output');
+    const objectsOutput = document.getElementById('objects-output');
+
+    // Drag & Drop handlers
+    dropArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropArea.classList.add('dragover');
+    });
+    dropArea.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        dropArea.classList.remove('dragover');
+    });
+    dropArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropArea.classList.remove('dragover');
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+            fileInput.files = e.dataTransfer.files;
+            showPreview(e.dataTransfer.files[0]);
+        }
+    });
+
+    // Click to open file dialog
+    dropArea.addEventListener('click', () => {
+        fileInput.click();
+    });
+
+    // File input change
+    fileInput.addEventListener('change', (e) => {
+        if (fileInput.files && fileInput.files[0]) {
+            showPreview(fileInput.files[0]);
+        }
+    });
+
+    function showPreview(file) {
+        if (!file.type.startsWith('image/')) {
+            resultMessage.textContent = "Please select a valid image file.";
+            previewImg.style.display = "none";
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            previewImg.src = e.target.result;
+            previewImg.style.display = "block";
+        };
+        reader.readAsDataURL(file);
+        resultMessage.textContent = "";
+    }
+
+    // Form submit via AJAX
+    uploadForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        resultMessage.textContent = "";
+        outputSection.style.display = "none";
+        if (!fileInput.files || !fileInput.files[0]) {
+            resultMessage.textContent = "Please select an image to upload.";
+            return;
+        }
+        const formData = new FormData();
+        formData.append('image', fileInput.files[0]);
+
+        // Show loading message
+        resultMessage.textContent = "Processing image, please wait...";
+
+        fetch("/", {
+            method: "POST",
+            body: formData
+        })
+        .then(async response => {
+            // Try to parse as HTML (since Flask renders template)
+            const text = await response.text();
+            // Create a DOM parser to extract variables
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(text, "text/html");
+
+            // Try to extract result, scene, objects, output_img_url from the rendered HTML
+            // (Assume Flask renders them as JS variables or in hidden elements)
+            // We'll use a hack: inject a script block in Flask template to expose them as window vars
+            // But for now, let's try to extract from the HTML
+
+            // Extract scene
+            let scene = doc.getElementById('scene-flask');
+            let objects = doc.getElementById('objects-flask');
+            let outputImgUrl = doc.getElementById('output-img-url-flask');
+            let result = doc.getElementById('result-flask');
+
+            // If not found, fallback to regex (for robustness)
+            if (!scene && !objects && !outputImgUrl) {
+                // Try to extract from the HTML using regex
+                const sceneMatch = text.match(/id="scene-flask".*?>(.*?)</);
+                const objectsMatch = text.match(/id="objects-flask".*?>(.*?)</);
+                const outputImgUrlMatch = text.match(/id="output-img-url-flask".*?>(.*?)</);
+                const resultMatch = text.match(/id="result-flask".*?>(.*?)</);
+
+                scene = sceneMatch ? {textContent: sceneMatch[1]} : null;
+                objects = objectsMatch ? {textContent: objectsMatch[1]} : null;
+                outputImgUrl = outputImgUrlMatch ? {textContent: outputImgUrlMatch[1]} : null;
+                result = resultMatch ? {textContent: resultMatch[1]} : null;
+            }
+
+            // If Flask did not render the variables, fallback to showing the HTML
+            if (!scene && !objects && !outputImgUrl) {
+                resultMessage.textContent = "Error: Could not parse server response.";
+                return;
+            }
+
+            // Show output
+            outputSection.style.display = "flex";
+            // Output image
+            if (outputImgUrl && outputImgUrl.textContent) {
+                outputImage.src = outputImgUrl.textContent;
+                outputImage.style.display = "block";
+            } else {
+                outputImage.style.display = "none";
+            }
+            // Scene
+            sceneOutput.textContent = scene && scene.textContent ? scene.textContent : "N/A";
+            // Objects
+            objectsOutput.innerHTML = "";
+            if (objects && objects.textContent) {
+                try {
+                    // Try to parse as list
+                    let objList = JSON.parse(objects.textContent.replace(/'/g, '"'));
+                    if (Array.isArray(objList)) {
+                        objList.forEach(obj => {
+                            const li = document.createElement('li');
+                            li.textContent = obj;
+                            objectsOutput.appendChild(li);
+                        });
+                    } else {
+                        objectsOutput.innerHTML = `<li>${objects.textContent}</li>`;
+                    }
+                } catch {
+                    // Fallback: comma split
+                    objects.textContent.split(',').forEach(obj => {
+                        const li = document.createElement('li');
+                        li.textContent = obj.trim();
+                        objectsOutput.appendChild(li);
+                    });
+                }
+            } else {
+                objectsOutput.innerHTML = "<li>N/A</li>";
+            }
+            // Result message
+            if (result && result.textContent) {
+                resultMessage.textContent = result.textContent;
+            } else {
+                resultMessage.textContent = "";
+            }
+        })
+        .catch(err => {
+            resultMessage.textContent = "Error: " + err;
+        });
+    });
+</script>
+
+<!-- These hidden elements will be filled by Flask render_template -->
+{% if scene is defined %}
+    <span id="scene-flask" style="display:none;">{{ scene }}</span>
+{% endif %}
+{% if objects is defined %}
+    <span id="objects-flask" style="display:none;">{{ objects|tojson }}</span>
+{% endif %}
+{% if output_img_url is defined %}
+    <span id="output-img-url-flask" style="display:none;">{{ output_img_url }}</span>
+{% endif %}
+{% if result is defined %}
+    <span id="result-flask" style="display:none;">{{ result }}</span>
+{% endif %}
