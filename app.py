@@ -1,12 +1,11 @@
-afrom flask import Flask, request, render_template, send_file, abort
-from flask import Flask, request, render_template, send_file, abort, send_from_directory
+from flask import Flask, request, render_template, send_file, abort
 from detect_objects import detect_objects
 from classify_scene import classify_scene
 import os
 from werkzeug.utils import secure_filename
 import shutil
 
-app = Flask(__name__, template_folder='.')  # index.html and other html files are in the same folder as this script
+app = Flask(__name__, template_folder='.')  # index.html is in the same folder as this script
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
@@ -63,13 +62,6 @@ def output_image(filename):
     if not os.path.exists(file_path):
         abort(404, description="Image not found")
     return send_file(file_path, mimetype="image/jpeg")
-
-# Allow access to any html file in the current directory (for pattern.html, etc.)
-@app.route('/<path:filename>')
-def serve_html(filename):
-    if filename.endswith('.html') and os.path.exists(filename):
-        return send_from_directory('.', filename)
-    abort(404)
 
 if __name__ == "__main__":
     app.run(debug=True)

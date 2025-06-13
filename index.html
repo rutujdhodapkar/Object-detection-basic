@@ -9,6 +9,11 @@
             height: 100%;
             margin: 0;
             padding: 0;
+            background: #000 !important;
+            /* overflow: hidden !important;  <-- allow scroll */
+            width: 100vw;
+            min-width: 100vw;
+            min-height: 100vh;
         }
         body {
             font-family: 'Segoe UI', Arial, sans-serif;
@@ -21,9 +26,10 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            background: none;
+            background: #000 !important;
             position: relative;
             z-index: 0;
+            /* overflow: hidden !important; <-- allow scroll */
         }
         /* Center everything using a flex wrapper */
         .center-wrapper {
@@ -225,8 +231,6 @@
 </div>
 
 <script>
-    // pattern.html removed
-
     const dropArea = document.getElementById('drop-area');
     const fileInput = document.getElementById('file-input');
     const previewImg = document.getElementById('preview');
@@ -387,6 +391,25 @@
             resultMessage.textContent = "Error: " + err;
         });
     });
+
+    // Allow scroll: Remove all scroll prevention code below
+    /*
+    window.addEventListener('scroll', function(e) {
+        window.scrollTo(0, 0);
+    });
+    document.body.addEventListener('touchmove', function(e) {
+        e.preventDefault();
+    }, { passive: false });
+    document.body.addEventListener('wheel', function(e) {
+        e.preventDefault();
+    }, { passive: false });
+    document.body.addEventListener('keydown', function(e) {
+        // Prevent arrow keys, space, page up/down, home/end
+        if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," ","PageUp","PageDown","Home","End"].includes(e.key)) {
+            e.preventDefault();
+        }
+    });
+    */
 </script>
 
 <!-- These hidden elements will be filled by Flask render_template -->
