@@ -9,7 +9,7 @@ import threading
 import time
 from ultralytics import YOLO
 
-app = Flask(__name__, template_folder='.')  # index.html is in the same folder as this script
+app = Flask(__name__, template_folder='.', static_folder='static')
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
@@ -94,7 +94,7 @@ def index():
                 else:
                     output_img_url = None
 
-    return render_template("index.html", scene=scene, objects=objects, output_img_url=output_img_url, result=result)
+    return render_template("main.html", scene=scene, objects=objects, output_img_url=output_img_url, result=result)
 
 @app.route("/output_image/<filename>")
 def output_image(filename):
@@ -144,13 +144,11 @@ def video_feed():
 def live_camera():
     return Response(gen_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
-# Note: The HTML for the camera button and video stream should be placed in index.html.
-# Example (add to index.html where appropriate):
-# <button id="openCameraBtn" onclick="document.getElementById('cam').style.display='block';this.style.display='none';">Open Camera</button>
-# <div id="cam" style="display:none;">
-#     <img src="/video_feed" width="800" />
-# </div>
-# You can use JavaScript to show/hide the camera stream on button click.
+@app.route('/<path:filename>')
+def serve_files(filename):
+    if filename.endswith('.html'):
+        return render_template(filename)
+    return send_file(filename)
 
 if __name__ == "__main__":
     app.run(debug=True, threaded=True)
